@@ -1,0 +1,116 @@
+---
+title: "Data Wrangling for Shiny App"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(quantmod)
+library(tidyverse)
+library(robotstxt)
+library(rvest)
+library(knitr)
+library(dplyr)
+
+#scrapes the list of S&P 500 companies from Wikipedia 
+url <- "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+paths_allowed('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
+
+tables <- url %>%
+  read_html() %>%
+  html_nodes('table')
+
+companies_table <- html_table(tables[[1]]) %>% 
+  select(Symbol, Security, 'GICS Sector') 
+
+#changes the symbols so that they match the names of the data sets in quantmod package
+companies_table$Symbol[67] <- "BRK-B"
+companies_table$Symbol[80] <- "BF-B"
+x <- companies_table$Symbol
+
+#loads the stock data from Yahoo Finance from January 1 2017 and onwards
+getSymbols(x, src="yahoo", from = "2017-01-01")
+
+#get prices for each stock 
+for(i in 1:length(x)) {
+  #stores the data for each stock by its symbol
+  dat <- get(x[i]) 
+  dat2 <- as.data.frame(dat) %>%
+    #converts date into a new column
+    rownames_to_column("Date") %>%
+    #creates a new column with symbols
+    mutate(company = x[i])
+  colnames(dat2) <- c("Date", "Open", "High", "Low", "Close", "Volume", "Adjusted", "Symbol")
+  if (i == 1) {
+    all_data <- dat2
+  } else {
+  all_data <- bind_rows(all_data, dat2)
+  }
+}
+
+#get P/E ratios for each stock 
+for(i in 1:length(x)) {
+  #stores the data for each stock by its symbol
+  dat <- getQuote(x[i], what = yahooQF("P/E Ratio")) 
+  dat2 <- as.data.frame(dat) %>%
+    #creates a new column with symbols
+    mutate(Symbol = x[i]) %>%
+    select('P/E Ratio', Symbol)
+  if (i == 1) {
+    pe_data <- dat2
+  } else {
+  pe_data <- bind_rows(pe_data, dat2)
+  }
+}
+
+#matching sector symbols to the quantmod package
+sector <- c("XLV", "XLI", "XLP", "XLY", "XLB", "XLU", "XLF", "XLE", "XLK", "XLRE", "XLC")
+
+#loading sector data from Yahoo Finance
+getSymbols(sector, src="yahoo", from = "2017-01-01")
+
+for(i in 1:length(sector)) {
+  #stores the data for each stock by its symbol
+  dat <- get(sector[i]) 
+  dat2 <- as.data.frame(dat) %>%
+    #converts date into a new column
+    rownames_to_column("Date") %>%
+    #creates a new column with symbols
+    mutate(company = sector[i])
+  colnames(dat2) <- c("Date", "Open", "High", "Low", "Close", "Volume", "Adjusted", "Symbol")
+  if (i == 1) {
+    sector_data <- dat2
+  } else {
+  sector_data <- bind_rows(sector_data, dat2)
+  }
+}
+
+
+#converts the data set into wide format and focus only on Open stock prices
+wide_data <- all_data %>%
+  pivot_wider(id_cols = Symbol, names_from = Date, values_from = Open)
+
+#merges the data set with the table scraped from Wikipedia so it includes company
+#name, sector, and P/E ratio
+final <- wide_data %>%
+  left_join(companies_table, by = "Symbol") %>%
+  rename(Name = Security, Sector = "GICS Sector") %>%
+  left_join(pe_data, by = "Symbol")
+
+#reorders the columns so that symbol, company name and sector come first
+col_order <- c(1, 953, 954, 955, 2:952)
+final <- final[, col_order]
+```
+
+# save final data as permanent file
+
+The last lines in your data wrangling file should be code that outputs your wrangled dataset as a permanent file (e.g., an R dataframe or csv file). The purpose of this is to keep your wrangling code separate from your Shiny app code. In your Shiny app code, you can then load the wrangled dataset that you saved and jump right into (or more quickly into) defining the ui and the server functions.
+
+```{r}
+write_csv(final, "final.csv")
+write_csv(sector_data, "sector_data.csv")
+```
+
