@@ -112,5 +112,6 @@ The last lines in your data wrangling file should be code that outputs your wran
 ```{r}
 write_csv(final, "final.csv")
 write_csv(sector_data, "sector_data.csv")
+write_csv(companies_table, "companies_table.csv")
 ```
 
