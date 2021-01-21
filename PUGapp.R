@@ -81,8 +81,17 @@ server <- function(input,output){
   #plot for Tab 1
   output$line <- renderPlot({
     ggplot(data = long_data(), aes(x = Date, y =  Price, color = symbol)) +
-             geom_line() 
-      })
+             geom_line() +
+              xlab("Date") +
+              ylab("Price ($)") +
+              labs(color = "Company Name") +
+              ggtitle("Share Price Performance") +
+              theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+                    axis.title.y = element_text(size = 14),
+                    axis.title.x = element_text(size = 14),
+                    axis.text.x = element_text(size = 12),
+                    legend.text = element_text(size = 10))
+  })
   
   #plot for Tab2
   output$table <- renderTable({
@@ -94,8 +103,13 @@ server <- function(input,output){
     ggplot(data = use_data2(), aes(x = as.Date(Date), y =  Open, color = as.factor(Symbol))) +
       geom_line() +
       xlab("Date") +
-      ylab("Sector Index") +
-      theme(legend.position = "none")
+      ylab("Price ($)") +
+      ggtitle('Sector Index Price Performance') +
+      theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+            axis.title.y = element_text(size = 14),
+            axis.title.x = element_text(size = 14),
+            axis.text.x = element_text(size = 12),
+            legend.text = element_text(size = 10))
   })
 }
 
