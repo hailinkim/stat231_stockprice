@@ -38,14 +38,21 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      textInput(inputId = "stock"
-                , label = "Choose Stock Ticker(s)"
-                , value = ""),
-      selectInput(inputId = "sector"
-                  , label = "Choose S&P Sector"
-                  , choices = sector_choices
-                  , selected = "")
+      selectizeInput(inputId = "stock"
+                     , label = "Choose Stock Ticker(s)"
+                     , choices = companies_table$Symbol
+                     , selected = ("MMM, AAPL, FB")
+                     , multiple = TRUE
+                     , options = NULL),
+      
+      selectizeInput(inputId = "sector"
+                     , label = "Choose S&P Sector"
+                     , choices = sector_choices
+                     , selected = ""
+                     , multiple = TRUE
+                     , options = NULL)
     ),
+    
     
     #set tab names
     mainPanel(
@@ -94,8 +101,17 @@ server <- function(input,output){
   })
   
   #plot for Tab2
-  output$table <- renderTable({
-    dplyr::select(use_data(), state, input$x, input$y)
+  output$bar <- renderPlot({
+    ggplot(data = use_data(), aes(y = p_e_ratio, x = symbol)) +
+      geom_bar(stat = 'identity', position = 'dodge',
+               aes(fill = as.factor(symbol)), show.legend = FALSE, width = 0.3) +
+      xlab('Companies') +
+      ylab('Price/Earnings Ratio') +
+      ggtitle('Comparison of P/E Ratios by Company') +
+      theme(plot.title = element_text(size = 16, face = "bold", hjust = 0.5),
+            axis.title.y = element_text(size = 14), 
+            axis.text.x = element_text(size = 12),
+            axis.title.x = element_text(size = 14))
   })
   
   #plot for Tab3
