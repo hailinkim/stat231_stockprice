@@ -12,10 +12,10 @@ names(price_data)[4:953] <- substring(names(price_data)[4:953], 2, 11)
 
 sector_data <- read.csv('/Users/angelica/git/Shiny-Stratton-Oakmont/sector_data.csv')
 
-#make dates a list
+#make dates into a vector to prepare for plotting
 date_list <- colnames(price_data)[4:953]
 
-
+#set sector choices for Sector Analysis tab
 sector_choices <- as.list(c( unique(sector_data$Symbol)))
 sector_choices_names <- c("Healthcare"
                           , "Industrials"
@@ -31,7 +31,7 @@ sector_choices_names <- c("Healthcare"
 names(sector_choices) <- sector_choices_names
 
 
-#set inputs for plot(s)
+#set app title and inputs for plot(s)
 ui <- fluidPage(
   
   h1("Stock Price Data 2017-Present"),
@@ -47,6 +47,7 @@ ui <- fluidPage(
                   , selected = "")
     ),
     
+    #set tab names
     mainPanel(
       
       tabsetPanel(type = "tabs"
@@ -59,37 +60,42 @@ ui <- fluidPage(
   )
 )
 
+#set plot output
 server <- function(input,output){
-  
+  #data for Tab 1
+  #filter data by stock selection
   use_data <- reactive({
     data <- filter(price_data, symbol %in% input$stock)
   })
+  #convert to long format for plotting
   long_data <- reactive({
     use_data() %>% gather(key = "Date", value = "Price", date_list) %>%
       mutate(Date = anydate(Date))
   })
-  
+  #data for Tab3
+  #filter data by sector selection
   use_data2 <- reactive({
     data <- filter(sector_data, Symbol %in% input$sector)
   })
   
+  #plot for Tab 1
   output$line <- renderPlot({
     ggplot(data = long_data(), aes(x = Date, y =  Price, color = symbol)) +
              geom_line() 
       })
   
+  #plot for Tab2
+  output$table <- renderTable({
+    dplyr::select(use_data(), state, input$x, input$y)
+  })
+  
+  #plot for Tab3
   output$sector <- renderPlot({
     ggplot(data = use_data2(), aes(x = as.Date(Date), y =  Open, color = as.factor(Symbol))) +
       geom_line() +
       xlab("Date") +
       ylab("Sector Index") +
       theme(legend.position = "none")
-  })
-
-  
-  
-  output$table <- renderTable({
-    dplyr::select(use_data(), state, input$x, input$y)
   })
 }
 
